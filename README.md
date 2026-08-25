@@ -2,21 +2,26 @@
 
 Projekat iz predmeta **Veštačka inteligencija sa primenama**.
 
-Tema projekta je klasifikacija slika hrane iz Food-11 skupa podataka korišćenjem neuronskih mreža u PyTorch-u.
+Projekat obuhvata kompletan sistem za klasifikaciju slika hrane iz Food-11 skupa podataka. Sistem uključuje analizu podataka, preprocessing pipeline, treniranje i evaluaciju ResNet18 modela, praćenje eksperimenata pomoću MLflow-a, Streamlit web aplikaciju za interakciju sa modelom i Docker kontejner za pokretanje aplikacije.
 
 ## Struktura projekta
 
 ```text
 Food11-Classification/
-│
+├── app/
+│   ├── __init__.py
+│   ├── app.py
+│   └── inference.py
 ├── data/
 │   ├── training/
 │   ├── validation/
 │   └── evaluation/
-│
+├── mlruns/
+├── models/
+│   └── best_food11_resnet18.pth
 ├── notebooks/
 │   └── food11_analysis.ipynb
-│
+├── results/
 ├── src/
 │   ├── data_pipeline.py
 │   ├── model.py
@@ -28,96 +33,73 @@ Food11-Classification/
 │   ├── train_final.py
 │   ├── evaluate_final.py
 │   └── plot_learning_curves.py
-│
-├── results/
-├── models/
-├── mlruns/
-├── .gitignore
+├── .dockerignore
 ├── .gitattributes
+├── .gitignore
+├── Dockerfile
+├── requirements.txt
 └── README.md
 ```
 
 ## Dataset
 
-Korišćen je Food-11 skup podataka sa 11 klasa hrane.
+Korišćen je Food-11 skup podataka za klasifikaciju slika hrane sa 11 klasa:
 
-Dataset je podeljen na:
+- bread
+- dairy_product
+- dessert
+- egg
+- fried_food
+- meat
+- noodles_pasta
+- rice
+- seafood
+- soup
+- vegetable_fruit
 
-- training
-- validation
-- evaluation
-
-Dataset se ne čuva u GitHub repozitorijumu zbog veličine.
+Dataset je podeljen na training, validation i evaluation skupove. Zbog veličine se ne čuva u GitHub repozitorijumu.
 
 ## Analiza podataka
 
-Analiza skupa podataka urađena je u Jupyter notebook-u:
+Eksploratorna analiza urađena je u `notebooks/food11_analysis.ipynb`.
 
-`notebooks/food11_analysis.ipynb`
+Analiza obuhvata:
 
-U okviru analize urađeno je:
-
-- učitavanje podataka
-- provera strukture training, validation i evaluation skupova
-- provera postojanja svih klasa
+- proveru strukture skupa
 - broj slika po klasama
-- osnovna deskriptivna statistika
-- prikaz distribucije uzoraka
-- provera praznih i nedostajućih klasa
-- provera oštećenih i nečitljivih slika
-- analiza dimenzija slika
-- analiza odnosa širine i visine
-- prikaz primera slika iz različitih klasa
+- deskriptivnu statistiku
+- distribuciju uzoraka
+- proveru praznih i nedostajućih klasa
+- proveru oštećenih i nečitljivih slika
+- analizu dimenzija i odnosa širine i visine
+- prikaz primera slika
 
-Pošto je u pitanju skup slika, klasična analiza NaN vrednosti i korelaciona matrica kao kod tabelarnih podataka nisu direktno primenljive. Umesto toga analizirane su osobine samih slika i raspodela uzoraka po klasama.
+## Preprocessing pipeline
 
-## Obrada i transformacije podataka
+Preprocessing je implementiran u `src/data_pipeline.py`.
 
-Učitavanje i transformacije nalaze se u fajlu:
+Slike se skaliraju na 224 × 224 piksela.
 
-`src/data_pipeline.py`
+Tokom treninga koriste se Resize, RandomHorizontalFlip, RandomRotation, ToTensor i ImageNet normalizacija. Tokom validacije, evaluacije i inferencije ne koristi se augmentacija.
 
-Slike se skaliraju na dimenziju 224x224 piksela.
+## Model
 
-Korišćene su sledeće transformacije:
+Arhitekture se nalaze u `src/model.py`.
 
-- Resize
-- RandomHorizontalFlip
-- RandomRotation
-- ToTensor
-- ImageNet normalizacija
-
-Augmentacija se koristi samo tokom treninga, dok se pri validaciji i evaluaciji ne koristi.
-
-## Modeli
-
-Arhitekture modela definisane su u posebnom modulu:
-
-`src/model.py`
-
-Implementirana su dva modela:
+Implementirani su:
 
 - BasicCNN
 - ResNet18
 
-ResNet18 je prilagođen Food-11 problemu tako što je poslednji potpuno povezani sloj promenjen da ima 11 izlaza.
+Za finalni sistem korišćen je ResNet18 sa 11 izlaznih klasa.
 
 ## Reproduktivnost
 
-Za eksperimente je korišćen fiksni random seed:
+Za eksperimente je korišćen fiksni random seed `42`.
 
-`42`
-
-Pored toga, beleže se verzije korišćenih biblioteka, CUDA verzija i informacije o GPU-u.
-
-Eksperimenti su izvršavani na:
-
-- NVIDIA RTX A4500
-- CUDA 13.2
+Eksperimenti su izvršavani na NVIDIA RTX A4500 GPU-u, uz evidentiranje verzija biblioteka, CUDA okruženja i hardverskih informacija.
 
 ## Eksperimentalne konfiguracije
-
-Testirano je pet različitih konfiguracija ResNet18 modela.
 
 | Konfiguracija | Optimizer | Learning rate | Augmentacija |
 |---|---|---:|---|
@@ -127,73 +109,39 @@ Testirano je pet različitih konfiguracija ResNet18 modela.
 | exp_04_resnet_aug_adamw | AdamW | 0.0001 | Da |
 | exp_05_resnet_aug_sgd | SGD | 0.001 | Da |
 
-Konfiguracije su definisane u:
-
-`src/experiments.py`
+Konfiguracije su definisane u `src/experiments.py`.
 
 ## Cross-validation
 
-Za svih pet konfiguracija korišćen je 5-fold cross-validation.
+Za svih pet konfiguracija korišćen je 5-fold cross-validation u `src/cross_validation.py`.
 
-Cross-validation je implementiran u:
-
-`src/cross_validation.py`
-
-Tokom eksperimenata automatski se beleže:
-
-- hiperparametri
-- train loss po epohi
-- validation loss po epohi
-- train accuracy po epohi
-- validation accuracy po epohi
-- accuracy po fold-u
-- precision po fold-u
-- recall po fold-u
-- F1 po fold-u
-- prosečne CV metrike
-- standardna devijacija
-- vreme treninga po fold-u
-- ukupno vreme treninga
-- GPU i CUDA informacije
+Beleženi su hiperparametri, train/validation loss i accuracy po epohi, metrike po fold-u, prosečne metrike, standardna devijacija, vreme treninga i hardverske informacije.
 
 ## Poređenje konfiguracija
 
-Rezultati cross-validation eksperimenata nalaze se u:
+Rezultati se nalaze u:
 
-`results/cross_validation_results.csv`
+- `results/cross_validation_results.csv`
+- `results/cv_comparison.png`
 
-Grafičko poređenje nalazi se u:
+Najbolja konfiguracija je `exp_04_resnet_aug_adamw`:
 
-`results/cv_comparison.png`
-
-Najbolji rezultat postigla je konfiguracija:
-
-`exp_04_resnet_aug_adamw`
-
-Njeni parametri su:
-
-- Optimizer: AdamW
-- Learning rate: 0.0001
-- Augmentacija: True
-- Batch size: 64
+- optimizer: AdamW
+- learning rate: 0.0001
+- augmentacija: uključena
+- batch size: 64
 
 Prosečna accuracy vrednost kroz 5 foldova iznosila je približno **56.15%**.
 
 ## Finalni model
 
-Na osnovu cross-validation rezultata izabrana je najbolja konfiguracija i njom je treniran finalni ResNet18 model.
-
-Model je sačuvan u:
+Finalni model se nalazi u:
 
 `models/best_food11_resnet18.pth`
 
-Model je dodat u GitHub repozitorijum pomoću Git LFS-a.
+Model se čuva pomoću Git LFS-a.
 
 ## Finalna evaluacija
-
-Finalni model je evaluiran na evaluation skupu.
-
-Dobijeni rezultati:
 
 | Metrika | Rezultat |
 |---|---:|
@@ -206,7 +154,7 @@ Dobijeni rezultati:
 
 ## Rezultati
 
-U folderu `results/` nalaze se:
+U `results/` nalaze se:
 
 - `cross_validation_results.csv`
 - `cv_comparison.png`
@@ -218,49 +166,79 @@ U folderu `results/` nalaze se:
 - `learning_curve_accuracy.png`
 - `resources.txt`
 
-## Learning curves
-
-Learning curve grafikoni generisani su iz MLflow podataka.
-
-Dostupni su:
-
-- `results/learning_curve_loss.png`
-- `results/learning_curve_accuracy.png`
-
-## Confusion matrix
-
-Konfuzioni matriks finalnog modela nalazi se u:
-
-`results/confusion_matrix.png`
-
-## ROC i Precision-Recall krive
-
-Za multiclass problem korišćen je One-vs-Rest pristup.
-
-Rezultati su sačuvani u:
-
-- `results/roc_curves.png`
-- `results/pr_curves.png`
-
 ## MLflow
 
-Svi eksperimenti su praćeni pomoću MLflow-a.
+MLflow logovi nalaze se u `mlruns/`.
 
-Logovi se nalaze u folderu:
-
-`mlruns/`
-
-MLflow UI se može pokrenuti komandom:
+Pokretanje MLflow UI-ja:
 
 ```bash
 mlflow ui --backend-store-uri ./mlruns --host 0.0.0.0 --port 5000
 ```
 
-Nakon toga se interfejs otvara na:
+Interfejs je zatim dostupan na `http://localhost:5000`.
 
-`http://localhost:5000`
+## Streamlit aplikacija
 
-## Pokretanje skripti
+Front-end je implementiran pomoću Streamlit biblioteke.
+
+Glavni fajl:
+
+`app/app.py`
+
+Inference logika:
+
+`app/inference.py`
+
+Aplikacija omogućava:
+
+- upload JPG/JPEG/PNG slike
+- prikaz učitane slike
+- klasifikaciju treniranim ResNet18 modelom
+- prikaz najverovatnije klase
+- confidence vrednost
+- top 3 predikcije
+- inference vreme
+
+Model je namenjen slikama iz Food-11 domena. Za slike van domena može dati pogrešnu predikciju sa visokom softmax verovatnoćom.
+
+## Lokalno pokretanje aplikacije
+
+Instalacija zavisnosti:
+
+```bash
+pip install -r requirements.txt
+```
+
+Pokretanje:
+
+```bash
+streamlit run app/app.py
+```
+
+Aplikacija je dostupna na `http://localhost:8501`.
+
+## Docker
+
+Docker image se pravi iz root foldera projekta:
+
+```bash
+docker build -t food11-classifier .
+```
+
+Kontejner se pokreće:
+
+```bash
+docker run --rm -p 8501:8501 food11-classifier
+```
+
+Aplikacija je zatim dostupna na `http://localhost:8501`.
+
+Docker image sadrži Python okruženje, PyTorch, torchvision, Streamlit, kod aplikacije, kod modela i trenirani model.
+
+`.dockerignore` sprečava uključivanje nepotrebnih fajlova kao što su dataset, notebook fajlovi, rezultati i MLflow logovi u Docker build context.
+
+## Pokretanje ML eksperimenata
 
 Cross-validation:
 
@@ -268,7 +246,7 @@ Cross-validation:
 python -m src.cross_validation
 ```
 
-Poređenje cross-validation rezultata:
+Poređenje CV rezultata:
 
 ```bash
 python -m src.compare_cv_results
@@ -286,7 +264,7 @@ Evaluacija finalnog modela:
 python -m src.evaluate_final
 ```
 
-Generisanje learning curve grafikona:
+Learning curves:
 
 ```bash
 python -m src.plot_learning_curves
@@ -294,16 +272,18 @@ python -m src.plot_learning_curves
 
 ## Git i verzionisanje
 
-Projekat je razvijan kroz više commit-a i eksperimentalni branch:
+Eksperimenti sa hiperparametrima razvijani su na branch-u:
 
 `experiment/hyperparameter-search`
 
-Na ovom branch-u rađena je optimizacija hiperparametara, cross-validation, poređenje konfiguracija i finalna evaluacija modela.
+Proširenje projekta za seminarski rad razvijano je na branch-u:
 
-Finalni model se čuva pomoću Git LFS-a.
+`seminarski`
+
+Git istorija prikazuje razvoj od analize i preprocessing-a, preko eksperimentisanja i finalnog modela, do Streamlit aplikacije i Docker implementacije.
 
 ## Zaključak
 
-Od pet testiranih konfiguracija najbolji rezultat je postigao ResNet18 model sa AdamW optimizerom, learning rate vrednošću 0.0001 i augmentacijom podataka.
+Razvijen je kompletan sistem za klasifikaciju slika hrane zasnovan na ResNet18 neuronskoj mreži.
 
-Cross-validation je korišćen za izbor najbolje konfiguracije, dok je evaluation skup korišćen za završnu proveru finalnog modela.
+Cross-validation je korišćen za izbor najbolje konfiguracije, finalni model je evaluiran na zasebnom evaluation skupu, a sistem je proširen Streamlit web aplikacijom i Docker kontejnerom za reproduktivno pokretanje.
