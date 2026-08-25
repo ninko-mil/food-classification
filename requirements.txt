@@ -1,0 +1,9 @@
+torch==2.12.1
+torchvision==0.27.1
+streamlit
+Pillow
+numpy
+pandas
+scikit-learn
+matplotlib
+mlflow==2.22.5
