@@ -1,0 +1,15 @@
+artifact_uri: file:///home/argus/Food11-Classification/mlruns/604840775390794827/6f337dff06834b11a24c64ad48852e99/artifacts
+end_time: 1787643495945
+entry_point_name: ''
+experiment_id: '604840775390794827'
+lifecycle_stage: active
+run_id: 6f337dff06834b11a24c64ad48852e99
+run_name: test_basic_cnn
+run_uuid: 6f337dff06834b11a24c64ad48852e99
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1787643435276
+status: 3
+tags: []
+user_id: argus

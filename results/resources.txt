@@ -1,0 +1,8 @@
+python_version: 3.12.3
+torch_version: 2.12.1+cu132
+torchvision_version: 0.27.1+cu132
+cuda_available: True
+cuda_version: 13.2
+gpu_name: NVIDIA RTX A4500
+gpu_count: 1
+gpu_memory_gb: 19.58
